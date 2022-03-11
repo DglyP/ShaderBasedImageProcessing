@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+			background-color: #AAAAAA;
+			background-attachment: fixed !important;
+			}
+		</style>
+		<style>
+			body {
+				font-family: Monospace;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+
+<script id="webcamVertShader" type="shader">
+	varying vec2 vUv;
+	void main() {
+	vUv = vec2( uv.x, 1.0-uv.y );
+	gl_Position = projectionMatrix *
+	modelViewMatrix * vec4(position, 1.0 );
+	}
+</script>
+			
+<script id="webcamFragShader" type="shader">
+	precision highp float;
+	const int kernelSizeDiv2 = 2;
+	uniform sampler2D image;
+	uniform int sizeDiv2;
+	uniform vec2 resolution;
+	uniform float colorScaleR;
+	uniform float colorScaleG;
+	uniform float colorScaleB;
+	uniform bool invert;
+	uniform bool anaglyph;
+	
+	varying vec2 vUv;
+	void main(void) {
+		vec2 cellSize = 1.0 / resolution.xy;
+		vec2 uv = vUv.xy;
+	
+		vec4 textureValue = vec4 ( 0,0,0,0 );
+		for (int i=-sizeDiv2;i<=sizeDiv2;i++)
+			for (int j=-sizeDiv2;j<=sizeDiv2;j++)
+				textureValue += texture2D( image, uv + vec2( float(i)*cellSize.x, float(j)*cellSize.y ) );
+		textureValue /= float ((sizeDiv2*2+1)*(sizeDiv2*2+1));
+		if (invert)
+		{
+			gl_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
+			gl_FragColor.rgb = vec3 ( 1.0 ) - gl_FragColor.rgb;
+		}
+		else if(anaglyph)
+		{
+			vec3 colorvalue = vec3 (colorScaleR, colorScaleG, colorScaleB);
+			vec3 column1_0 = vec3(0.299, 0.587, 0.114);
+			vec3 column1_1 = vec3(0.0, 0.0, 0.0);
+			vec3 column1_2 = vec3(0.0, 0.0, 0.0);
+			mat3 n1 = mat3(column1_0, column1_1, column1_2); // sets columns of matrix n
+	
+	
+			vec3 column2_0 = vec3(0.0, 0.0, 0.0);
+			vec3 column2_1 = vec3(0.0, 0.0, 0.0);
+			vec3 column2_2 = vec3(0.299, 0.587, 0.114);
+			mat3 n2 = mat3(column2_0, column2_1, column2_2); // sets columns of matrix n
+	
+			vec3 result = (n1 * colorvalue) + (n2 * colorvalue);
+	
+			gl_FragColor = vec4(result,1.0)*textureValue;
+		}
+		else
+			gl_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
+	}
+</script>
+
+
+<script id="videoVertShader" type="shader">
+	uniform mat4 modelViewMatrix;
+	uniform mat4 projectionMatrix;
+	
+	precision highp float;
+	
+	in vec3 position;
+	
+	void main() {
+		gl_Position = projectionMatrix *
+					  modelViewMatrix * vec4(position, 1.0 );
+	}
+</script>
+
+<script id="videoFragShader" type="shader">
+precision highp float;
+
+uniform sampler2D image;
+uniform int sizeDiv2;
+uniform float colorScaleR;
+uniform float colorScaleG;
+uniform float colorScaleB;
+uniform bool invert;
+
+out vec4 out_FragColor;
+
+void main(void) {
+
+				vec4 textureValue = vec4 ( 0,0,0,0 );
+				for (int i=-sizeDiv2;i<=sizeDiv2;i++)
+					for (int j=-sizeDiv2;j<=sizeDiv2;j++)
+					{
+						textureValue += texelFetch( image, ivec2(i+int(gl_FragCoord.x), j+int(gl_FragCoord.y)), 0 );
+					}
+				textureValue /= float ((sizeDiv2*2+1)*(sizeDiv2*2+1));
+				out_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
+				if (invert)
+				{
+					out_FragColor = vec4(1,1,1,0) - out_FragColor; 
+					out_FragColor.a = 1.0;
+				}
+		}
+</script>
+
+
+
+<script type="module">
+import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+import { GUI } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/lil-gui.module.min';
+import { WEBGL } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/WebGL.js';
+
+var camera, controls, scene, renderer, container;
+var context, canvas;
+var cleanSource, processedImage;
+
+//VIDEO AND THE ASSOCIATED TEXTURE
+var video, videoTexture;
+var imageProcessing, imageProcessingMaterial;
+
+// GUI
+var gui;
+
+init();
+animate();
+
+// Function for processing Image
+function IVimageProcessing ( height, width, imageProcessingMaterial){
+	this.height = height;
+	this.width = width;
+
+	// 3 rtt setup
+	this.scene = new THREE.Scene();
+	this.orthoCamera = new THREE.OrthographicCamera(-1,1,1,-1,1/Math.pow( 2,53 ), 1);
+
+	//4 create a target texture
+	var options = {
+	minFilter: THREE.NearestFilter,
+	magFilter: THREE.NearestFilter,
+	format: THREE.RGBAFormat,
+	//            type:THREE.FloatType
+	type:THREE.UnsignedByteType
+	};
+	this.rtt = new THREE.WebGLRenderTarget( width, height, options);
+
+	var geom = new THREE.BufferGeometry();
+	geom.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array([-1,-1,0, 1,-1,0, 1,1,0, -1,-1, 0, 1, 1, 0, -1,1,0 ]), 3 ) );
+	this.scene.add( new THREE.Mesh( geom, imageProcessingMaterial ) );
+}
+
+function IVprocess ( imageProcessing, renderer )
+{
+renderer.setRenderTarget( imageProcessing.rtt );
+renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
+renderer.setRenderTarget( null );
+};
+
+function videoProcessing (){
+	videoTexture = new THREE.VideoTexture( video );
+	videoTexture.minFilter = THREE.NearestFilter;
+	videoTexture.magFilter = THREE.NearestFilter;
+	videoTexture.generateMipmaps = false; 
+	videoTexture.format = THREE.RGBFormat;
+
+	imageProcessingMaterial = new THREE.RawShaderMaterial({
+	uniforms: {
+	sizeDiv2: {type: 'i', value: 5},
+	colorScaleR: {type: 'f', value: 1.0},
+	colorScaleG: {type: 'f', value: 1.0},
+	colorScaleB: {type: 'f', value: 1.0},
+	invert: {type: 'b', value: false},
+	image: {type: 't', value: videoTexture},
+	},
+	vertexShader: document.
+	getElementById('videoVertShader').text,
+	fragmentShader: document.
+	getElementById('videoFragShader').text,
+	glslVersion: THREE.GLSL3
+	});
+	imageProcessing = new IVimageProcessing ( video.videoHeight, video.videoWidth, imageProcessingMaterial );
+	
+	var geometry = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
+	var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
+	cleanSource = new THREE.Mesh( geometry, material );
+	cleanSource.receiveShadow = false;
+	cleanSource.castShadow = false;
+	scene.add( cleanSource );
+
+	var geometry2 = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
+	var material2 = new THREE.MeshBasicMaterial( { map: videoTexture, side : THREE.DoubleSide } );
+	processedImage = new THREE.Mesh( geometry2, material2 );
+	processedImage.receiveShadow = false;
+	processedImage.castShadow = false;
+	// Organize Planes so scene looks good
+	cleanSource.position.set(-0.55,0,-0.5);
+	processedImage.position.set(0.55,0,-0.5);
+	scene.add( processedImage );
+	video.play();			
+}
+
+function frameProcessing (){
+	imageProcessingMaterial = new THREE.RawShaderMaterial({
+	uniforms: {
+	sizeDiv2: {type: 'i', value: 5},
+	colorScaleR: {type: 'f', value: 1.0},
+	colorScaleG: {type: 'f', value: 1.0},
+	colorScaleB: {type: 'f', value: 1.0},
+	invert: {type: 'b', value: false},
+	image: {type: 't', value: videoTexture},
+	},
+	vertexShader: document.
+	getElementById('videoVertShader').text,
+	fragmentShader: document.
+	getElementById('videoFragShader').text,
+	glslVersion: THREE.GLSL3
+	});
+	
+	imageProcessing = new IVimageProcessing ( video.videoHeight, video.videoWidth, imageProcessingMaterial );
+
+	console.log ( imageProcessing.width );
+
+	var geometry = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
+	var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
+	cleanSource = new THREE.Mesh( geometry, material );
+	cleanSource.receiveShadow = false;
+	cleanSource.castShadow = false;
+	scene.add( cleanSource );
+
+	var geometry2 = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
+	var material2 = new THREE.MeshBasicMaterial( { map: videoTexture, side : THREE.DoubleSide } );
+	processedImage = new THREE.Mesh( geometry2, material2 );
+	processedImage.receiveShadow = false;
+	processedImage.castShadow = false;
+	// Organize Planes so scene looks good
+	cleanSource.position.set(-0.55,0,-0.5);
+	processedImage.position.set(0.55,0,-0.5);
+	scene.add( processedImage );
+}
+
+function init () {
+	
+    if ( WEBGL.isWebGL2Available() === false ) {
+		document.body.appendChild( WEBGL.getWebGL2ErrorMessage() );
+	}	
+    container = document.createElement( 'div' );
+	document.body.appendChild( container );
+    canvas = document.createElement( 'canvas' );
+	context = canvas.getContext( 'webgl2' );
+	document.body.appendChild( canvas );
+	scene = new THREE.Scene(); 
+
+	renderer = new THREE.WebGLRenderer( {  canvas: canvas, context: context});//, antialias: true, alpha: true } );
+	renderer.autoClear = false;
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.shadowMap.enabled = false;
+
+	container.appendChild( renderer.domElement );
+
+	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.001, 10 );
+	camera.position.z = 0.7;
+	controls = new OrbitControls( camera, renderer.domElement );
+	controls.minDistance = 0.005;
+	controls.maxDistance = 1.0;
+	controls.enableRotate = true;
+	controls.addEventListener( 'change', render );
+	controls.update();
+
+	//Query from URL
+	const queryString = window.location.search;
+	const urlParams = new URLSearchParams(queryString);
+	const sourceType = urlParams.get('sourceimage');
+	console.log(sourceType);
+	
+	//Create the variables that will change depending on things and stuff
+	var sourceHeight = 1080; //FIX
+	var sourceWidth = 1920; //FIX
+	
+	//Decide which type of file we are using - image || video || webcam
+	if (sourceType == "webcam"){
+
+		if ( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
+			const constraints = { video: { width: 1920, height: 1080, facingMode: 'user' } };
+			navigator.mediaDevices.getUserMedia( constraints ).then( function ( stream ) 
+			{
+			video = document.createElement('video');
+			video.srcObject = stream;
+			video.play();
+			video.onloadeddata = videoProcessing;
+			})}
+
+	}
+	else if(sourceType == "video"){
+		
+		video = document.createElement('video');
+		video.src = 'video.mp4';
+		video.load();
+		video.muted = true;
+		video.loop = true;
+		video.onloadeddata = videoProcessing
+
+	}
+	else if(sourceType == "image"){
+		const loader = new THREE.TextureLoader();
+                loader.load('grenouille.jpg', function (texture) {
+                    imageProcessingMaterial = new THREE.RawShaderMaterial({
+                        uniforms: {
+                            type: {type: 'i', value: 0},
+                            sizeDiv2: { type: 'i', value: 5 },
+                            colorScaleR: { type: 'f', value: 1.0 },
+                            colorScaleG: { type: 'f', value: 1.0 },
+                            colorScaleB: { type: 'f', value: 1.0 },
+                            invert: { type: 'b', value: false },
+                            image: { type: 't', value: texture },
+                        },
+                        vertexShader: document.
+                            getElementById('videoVertShader').text,
+                        fragmentShader: document.
+                            getElementById('videoFragShader').text,
+                        glslVersion: THREE.GLSL3
+                    });
+
+                    imageProcessing = new IVimageProcessing(texture.image.height, texture.image.width, imageProcessingMaterial);
+						
+						var geometry = new THREE.PlaneGeometry( 1, texture.image.height/texture.image.width );
+						var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
+						cleanSource = new THREE.Mesh( geometry, material );
+						cleanSource.receiveShadow = false;
+						cleanSource.castShadow = false;
+						scene.add( cleanSource );
+
+						var geometry2 = new THREE.PlaneGeometry( 1, texture.image.height/texture.image.width );
+						var material2 = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
+						processedImage = new THREE.Mesh( geometry2, material2 );
+						processedImage.receiveShadow = false;
+						processedImage.castShadow = false;
+						// Organize Planes so scene looks good
+						cleanSource.position.set(-0.55,0,-0.5);
+						processedImage.position.set(0.55,0,-0.5);
+						scene.add( processedImage );
+                });
+
+	}
+	else{
+		console.log("This is not a correct parameter");
+	}
+	
+	window.addEventListener( 'resize', onWindowResize, false );
+}
+
+function render () {
+	renderer.clear();
+	
+	if (typeof imageProcessing !== 'undefined') 
+		IVprocess ( imageProcessing, renderer );
+	renderer.render( scene, camera );
+	
+}
+
+function animate() {	
+	requestAnimationFrame(animate);
+	controls.update();
+	render();
+}
+
+function onWindowResize () {
+	camera.aspect = ( window.innerWidth / window.innerHeight);
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	render();
+}
+
+</script>
+</body>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+			background-attachment: fixed !important;
+			}
+		</style>
+		<style>
+			body {
+				font-family: Monospace;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+<script type="module">
+import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+import { GUI } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/lil-gui.module.min';
+
+var camera, controls, scene, renderer, container;
+
+// GUI
+var gui;
+
+init();
+animate();
+
+function init () {
+	
+    container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	scene = new THREE.Scene(); 
+	renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
+	renderer.autoClear = false;
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.shadowMap.enabled = false;
+
+	container.appendChild( renderer.domElement );
+
+	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.001, 10 );
+	camera.position.z = 0.7;
+	controls = new OrbitControls( camera, renderer.domElement );
+	controls.minDistance = 0.005;
+	controls.maxDistance = 1.0;
+	controls.enableRotate = true;
+	controls.addEventListener( 'change', render );
+	controls.update();
+}
+
+function render () {
+	renderer.clear();
+	
+	if (typeof imageProcessing !== 'undefined') 
+		IVprocess ( imageProcessing, renderer );
+	renderer.render( scene, camera );
+	
+}
+
+function animate() {	
+	requestAnimationFrame(animate);
+	controls.update();
+	render();
+}
+
+function onWindowResize () {
+	camera.aspect = ( window.innerWidth / window.innerHeight);
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	render();
+}
+
+</script>
+</body>
