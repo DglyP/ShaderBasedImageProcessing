@@ -1,80 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-			margin: 0;
-			padding: 0;
-			width: 100%;
-			height: 100%;
-			margin: 0;
-			overflow: hidden;
-			background-attachment: fixed !important;
-			}
-		</style>
-		<style>
-			body {
-				font-family: Monospace;
-				margin: 0px;
-				overflow: hidden;
-			}
-		</style>
-	</head>
-	<body>
-		<script id="vertexShader" type="shader">
-            uniform mat4 modelViewMatrix;
-            uniform mat4 projectionMatrix;
-            
-            precision highp float;
-            
-            in vec3 position;
-            
-            void main() {
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
-            }
-        </script>
-        
-        <script id="fragShader" type="shader">
-        precision highp float;
-        
-        uniform sampler2D image;
-        uniform int sizeDiv2;
-        uniform float colorScaleR;
-        uniform float colorScaleG;
-        uniform float colorScaleB;
-        uniform bool invert;
-        
-        //uniform float sigma;
-        //uniform float kernel;
-        //uniform sampler2D blurSampler;
-        //const float pi = 3.14159265f;
-        
-        out vec4 out_FragColor;
-        
-        void main(void) {
-        
-                        if (1 == 2){
-        
-                        }
-        
-                        vec4 textureValue = vec4 ( 0,0,0,0 );
-                        for (int i=-sizeDiv2;i<=sizeDiv2;i++)
-                            for (int j=-sizeDiv2;j<=sizeDiv2;j++)
-                            {
-                                textureValue += texelFetch( image, ivec2(i+int(gl_FragCoord.x), j+int(gl_FragCoord.y)), 0 );
-                            }
-                        textureValue /= float ((sizeDiv2*2+1)*(sizeDiv2*2+1));
-                        out_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
-                        if (invert)
-                        {
-                            out_FragColor = vec4(1,1,1,0) - out_FragColor; 
-                            out_FragColor.a = 1.0;
-                        }
-                }
-        </script>
-<script type="module">
 
 import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
@@ -110,11 +33,9 @@ function IVimageProcessing ( height, width, imageProcessingMaterial){
 	minFilter: THREE.NearestFilter,
 	magFilter: THREE.NearestFilter,
 	format: THREE.RGBAFormat,
-	//            type:THREE.FloatType
 	type:THREE.UnsignedByteType
 	};
 	this.rtt = new THREE.WebGLRenderTarget( width, height, options);
-
 	var geom = new THREE.BufferGeometry();
 	geom.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array([-1,-1,0, 1,-1,0, 1,1,0, -1,-1, 0, 1, 1, 0, -1,1,0 ]), 3 ) );
 	this.scene.add( new THREE.Mesh( geom, imageProcessingMaterial ) );
@@ -122,14 +43,18 @@ function IVimageProcessing ( height, width, imageProcessingMaterial){
 
 function IVprocess ( imageProcessing, renderer )
 {
-renderer.setRenderTarget( imageProcessing.rtt );
-renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
-renderer.setRenderTarget( null );
+	renderer.setRenderTarget( imageProcessing.rtt );
+	renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
+	renderer.setRenderTarget( null );
 };
 
 function frameProcessing (texture, height, width){
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
+				image: {type: "t", value: texture},
+				sigma: {type: "f", value: 1.0},
+				kernelSize: {type: "i", value: 1.0},
+				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
 				colorScaleB: { type: 'f', value: 1.0 },
@@ -145,7 +70,7 @@ function frameProcessing (texture, height, width){
 		imageProcessing = new IVimageProcessing(height, width, imageProcessingMaterial);
 			
 			var geometry = new THREE.PlaneGeometry( 1, height/width );
-			var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
+			var material = new THREE.MeshBasicMaterial( { map: texture, side : THREE.DoubleSide } );
 			cleanSource = new THREE.Mesh( geometry, material );
 			cleanSource.receiveShadow = false;
 			cleanSource.castShadow = false;
@@ -160,6 +85,13 @@ function frameProcessing (texture, height, width){
 			cleanSource.position.set(-0.55,0,-0.5);
 			processedImage.position.set(0.55,0,-0.5);
 			scene.add( processedImage );
+			
+			//Create all the GUI for the convolutions
+			gui = new GUI();
+			gui.add(imageProcessingMaterial.uniforms.sigma, "value", 1, 10, 1)
+				.name("Sigma");
+			gui.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 30, 1)
+				.name("Kernel Size");
 }
 
 function init () {
@@ -256,7 +188,8 @@ function init () {
 					frameProcessing(texture, sourceHeight, sourceWidth);
 				} );	
 	}
-	
+
+
 	window.addEventListener( 'resize', onWindowResize, false );
 }
 function render () {
@@ -280,6 +213,3 @@ function onWindowResize () {
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	render();
 }
-
-</script>
-</body>

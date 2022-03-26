@@ -1,85 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-			margin: 0;
-			padding: 0;
-			width: 100%;
-			height: 100%;
-			margin: 0;
-			overflow: hidden;
-			background-color: #AAAAAA;
-			background-attachment: fixed !important;
-			}
-		</style>
-		<style>
-			body {
-				font-family: Monospace;
-				margin: 0px;
-				overflow: hidden;
-			}
-		</style>
-	</head>
-	<body>
 
-<script id="vertexShader" type="shader">
-	uniform mat4 modelViewMatrix;
-	uniform mat4 projectionMatrix;
-	
-	precision highp float;
-	
-	in vec3 position;
-	
-	void main() {
-		gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
-	}
-</script>
-
-<script id="fragShader" type="shader">
-precision highp float;
-
-uniform sampler2D image;
-uniform int sizeDiv2;
-uniform float colorScaleR;
-uniform float colorScaleG;
-uniform float colorScaleB;
-uniform bool invert;
-
-//uniform float sigma;
-//uniform float kernel;
-//uniform sampler2D blurSampler;
-//const float pi = 3.14159265f;
-
-out vec4 out_FragColor;
-
-void main(void) {
-
-				if (1 == 2){
-
-				}
-
-				vec4 textureValue = vec4 ( 0,0,0,0 );
-				for (int i=-sizeDiv2;i<=sizeDiv2;i++)
-					for (int j=-sizeDiv2;j<=sizeDiv2;j++)
-					{
-						textureValue += texelFetch( image, ivec2(i+int(gl_FragCoord.x), j+int(gl_FragCoord.y)), 0 );
-					}
-				textureValue /= float ((sizeDiv2*2+1)*(sizeDiv2*2+1));
-				out_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
-				if (invert)
-				{
-					out_FragColor = vec4(1,1,1,0) - out_FragColor; 
-					out_FragColor.a = 1.0;
-				}
-		}
-</script>
-
-
-
-<script type="module">
 import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 import { GUI } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/lil-gui.module.min';
@@ -92,6 +11,7 @@ var cleanSource, processedImage;
 //VIDEO AND THE ASSOCIATED TEXTURE
 var video, videoTexture;
 var imageProcessing, imageProcessingMaterial;
+var sourceHeight, sourceWidth;
 
 // GUI
 var gui;
@@ -130,50 +50,7 @@ renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera );
 renderer.setRenderTarget( null );
 };
 
-function videoProcessing (){
-	videoTexture = new THREE.VideoTexture( video );
-	videoTexture.minFilter = THREE.NearestFilter;
-	videoTexture.magFilter = THREE.NearestFilter;
-	videoTexture.generateMipmaps = false; 
-	videoTexture.format = THREE.RGBFormat;
-
-	imageProcessingMaterial = new THREE.RawShaderMaterial({
-	uniforms: {
-	sizeDiv2: {type: 'i', value: 5},
-	colorScaleR: {type: 'f', value: 1.0},
-	colorScaleG: {type: 'f', value: 1.0},
-	colorScaleB: {type: 'f', value: 1.0},
-	invert: {type: 'b', value: false},
-	image: {type: 't', value: videoTexture},
-	},
-	vertexShader: document.
-	getElementById('vertexShader').text,
-	fragmentShader: document.
-	getElementById('fragShader').text,
-	glslVersion: THREE.GLSL3
-	});
-	imageProcessing = new IVimageProcessing ( video.videoHeight, video.videoWidth, imageProcessingMaterial );
-	
-	var geometry = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
-	var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
-	cleanSource = new THREE.Mesh( geometry, material );
-	cleanSource.receiveShadow = false;
-	cleanSource.castShadow = false;
-	scene.add( cleanSource );
-
-	var geometry2 = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
-	var material2 = new THREE.MeshBasicMaterial( { map: videoTexture, side : THREE.DoubleSide } );
-	processedImage = new THREE.Mesh( geometry2, material2 );
-	processedImage.receiveShadow = false;
-	processedImage.castShadow = false;
-	// Organize Planes so scene looks good
-	cleanSource.position.set(-0.55,0,-0.5);
-	processedImage.position.set(0.55,0,-0.5);
-	scene.add( processedImage );
-	video.play();			
-}
-
-function frameProcessing (texture){
+function frameProcessing (texture, height, width){
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				colorScaleR: { type: 'f', value: 1.0 },
@@ -188,16 +65,16 @@ function frameProcessing (texture){
 			glslVersion: THREE.GLSL3
 		});
 
-		imageProcessing = new IVimageProcessing(texture.image.height, texture.image.width, imageProcessingMaterial);
+		imageProcessing = new IVimageProcessing(height, width, imageProcessingMaterial);
 			
-			var geometry = new THREE.PlaneGeometry( 1, texture.image.height/texture.image.width );
+			var geometry = new THREE.PlaneGeometry( 1, height/width );
 			var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
 			cleanSource = new THREE.Mesh( geometry, material );
 			cleanSource.receiveShadow = false;
 			cleanSource.castShadow = false;
 			scene.add( cleanSource );
 
-			var geometry2 = new THREE.PlaneGeometry( 1, texture.image.height/texture.image.width );
+			var geometry2 = new THREE.PlaneGeometry( 1, height/width );
 			var material2 = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
 			processedImage = new THREE.Mesh( geometry2, material2 );
 			processedImage.receiveShadow = false;
@@ -242,10 +119,6 @@ function init () {
 	const sourceType = urlParams.get('sourceimage');
 	console.log(sourceType);
 	
-	//Create the variables that will change depending on things and stuff
-	var sourceHeight = 1080; //FIX
-	var sourceWidth = 1920; //FIX
-	
 	//Decide which type of file we are using - image || video || webcam
 	if (sourceType == "webcam"){
 
@@ -256,33 +129,59 @@ function init () {
 			video = document.createElement('video');
 			video.srcObject = stream;
 			video.play();
-			video.onloadeddata = videoProcessing;
+            video.onloadeddata = function () {
+                videoTexture = new THREE.VideoTexture(video);
+                videoTexture.wrapS = videoTexture.wrapT = THREE.RepeatWrapping;
+                videoTexture.minFilter = THREE.NearestFilter;
+                videoTexture.magFilter = THREE.NearestFilter;
+                videoTexture.generateMipmaps = false;
+                videoTexture.format = THREE.RGBFormat;        
+                sourceHeight = video.videoHeight;
+                sourceWidth = video.videoWidth;
+                frameProcessing(videoTexture, sourceHeight, sourceWidth);
+            }            
 			})}
 
 	}
 	else if(sourceType == "video"){
 		
 		video = document.createElement('video');
-		video.src = 'video.mp4';
+		video.src = '../../../assets/video.mp4';
 		video.load();
 		video.muted = true;
 		video.loop = true;
-		video.onloadeddata = videoProcessing
+        video.play();
+        video.onloadeddata = function () {
+            videoTexture = new THREE.VideoTexture( video );
+            videoTexture.minFilter = THREE.NearestFilter;
+            videoTexture.magFilter = THREE.NearestFilter;
+            videoTexture.generateMipmaps = false; 
+            videoTexture.format = THREE.RGBFormat;      
+            sourceHeight = video.videoHeight;
+            sourceWidth = video.videoWidth;
+            frameProcessing(videoTexture, sourceHeight, sourceWidth);
+        }            
 
 	}
 	else if(sourceType == "image"){
 		const loader = new THREE.TextureLoader();
-                loader.load('grenouille.jpg', function(texture){
-					frameProcessing(texture);
+                loader.load('../../../assets/grenouille.jpg', function(texture){
+                    sourceHeight = texture.image.height;
+                    sourceWidth = texture.image.width;
+					frameProcessing(texture, sourceHeight, sourceWidth);
 				} );
 	}
-	else{
-		console.log("This is not a correct parameter");
+	else{	
+		const loader = new THREE.TextureLoader();
+                loader.load('../../../assets/grenouille.jpg', function(texture){
+					sourceHeight = texture.image.height;
+                    sourceWidth = texture.image.width;
+					frameProcessing(texture, sourceHeight, sourceWidth);
+				} );	
 	}
 	
 	window.addEventListener( 'resize', onWindowResize, false );
 }
-
 function render () {
 	renderer.clear();
 	
@@ -304,6 +203,3 @@ function onWindowResize () {
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	render();
 }
-
-</script>
-</body>
