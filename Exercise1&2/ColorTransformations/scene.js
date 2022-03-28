@@ -33,11 +33,9 @@ function IVimageProcessing ( height, width, imageProcessingMaterial){
 	minFilter: THREE.NearestFilter,
 	magFilter: THREE.NearestFilter,
 	format: THREE.RGBAFormat,
-	//            type:THREE.FloatType
 	type:THREE.UnsignedByteType
 	};
 	this.rtt = new THREE.WebGLRenderTarget( width, height, options);
-
 	var geom = new THREE.BufferGeometry();
 	geom.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array([-1,-1,0, 1,-1,0, 1,1,0, -1,-1, 0, 1, 1, 0, -1,1,0 ]), 3 ) );
 	this.scene.add( new THREE.Mesh( geom, imageProcessingMaterial ) );
@@ -45,20 +43,21 @@ function IVimageProcessing ( height, width, imageProcessingMaterial){
 
 function IVprocess ( imageProcessing, renderer )
 {
-renderer.setRenderTarget( imageProcessing.rtt );
-renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
-renderer.setRenderTarget( null );
+	renderer.setRenderTarget( imageProcessing.rtt );
+	renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
+	renderer.setRenderTarget( null );
 };
 
 function frameProcessing (texture, height, width){
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				image: {type: "t", value: texture},
-				kernelSize: {type: "i", value: 4.0},
+				hueShift: {type: "f", value: 2.0},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
 				colorScaleB: { type: 'f', value: 1.0 },
+				image: { type: 't', value: texture },
 			},
 			vertexShader: document.
 				getElementById('vertexShader').text,
@@ -88,8 +87,9 @@ function frameProcessing (texture, height, width){
 
 			gui = new GUI();
 			gui
-			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 10, 1)
-			  .name("Kernel Size");
+			  .add(imageProcessingMaterial.uniforms.hueShift, "value", 0, 360)
+			  .name("Hue Shift");
+			
 }
 
 function init () {
@@ -124,7 +124,7 @@ function init () {
 	const queryString = window.location.search;
 	const urlParams = new URLSearchParams(queryString);
 	const sourceType = urlParams.get('sourceimage');
-	console.log("You have provided a " + sourceType + " parameter");
+	console.log(sourceType);
 
 	//Futuristic Scene
 	var envSphere = new THREE.SphereGeometry( 5, 60, 40 );
@@ -195,7 +195,8 @@ function init () {
 					frameProcessing(texture, sourceHeight, sourceWidth);
 				} );	
 	}
-	
+
+
 	window.addEventListener( 'resize', onWindowResize, false );
 }
 function render () {

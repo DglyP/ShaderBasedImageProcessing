@@ -54,7 +54,9 @@ function frameProcessing (texture, height, width){
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				image: {type: "t", value: texture},
-				kernelSize: {type: "i", value: 4.0},
+				scaleX: {type: "f", value: 1.0},
+				scaleY: {type: "f", value: 1.0},
+				interpolation: {type: "i", value: 0},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
@@ -64,6 +66,7 @@ function frameProcessing (texture, height, width){
 				getElementById('vertexShader').text,
 			fragmentShader: document.
 				getElementById('fragShader').text,
+			side: THREE.DoubleSide,
 			glslVersion: THREE.GLSL3
 		});
 
@@ -87,9 +90,16 @@ function frameProcessing (texture, height, width){
 			scene.add( processedImage );
 
 			gui = new GUI();
+			// Image scaling
 			gui
-			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 10, 1)
-			  .name("Kernel Size");
+			.add(imageProcessingMaterial.uniforms.scaleX, "value", 0.1, 3)
+			.name("Scale X");
+			gui
+			.add(imageProcessingMaterial.uniforms.scaleY, "value", 0.1, 3)
+			.name("Scale Y");
+			gui
+			.add(imageProcessingMaterial.uniforms.interpolation, "value", {Bilinear: 0, Nearest: 1, NoInterp: 2})
+			.name("Interp. Method");
 }
 
 function init () {

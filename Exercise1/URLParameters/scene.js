@@ -108,17 +108,35 @@ function init () {
 	camera.position.z = 0.7;
 	controls = new OrbitControls( camera, renderer.domElement );
 	controls.minDistance = 0.005;
-	controls.maxDistance = 1.0;
+	controls.maxDistance = 3.0;
 	controls.enableRotate = true;
 	controls.addEventListener( 'change', render );
 	controls.update();
+
+	//Light
+	{
+		const color = 0xFFFFFF;
+		const intensity = 2;
+		const light = new THREE.PointLight(color, intensity, 1000);
+		light.position.set(0, 2, -9);
+		scene.add(light);
+	}
 
 	//Query from URL
 	const queryString = window.location.search;
 	const urlParams = new URLSearchParams(queryString);
 	const sourceType = urlParams.get('sourceimage');
 	console.log(sourceType);
-	
+
+	//Futuristic Scene
+	var envSphere = new THREE.SphereGeometry( 5, 60, 40 );
+	var material2 = new THREE.MeshBasicMaterial( {
+		map: new THREE.TextureLoader().load( '../../assets/city.jpg' ), side : THREE.DoubleSide
+	} );
+	var environment = new THREE.Mesh( envSphere, material2 );
+	environment.rotation.y = THREE.MathUtils.degToRad(90);
+	scene.add( environment );
+		
 	//Decide which type of file we are using - image || video || webcam
 	if (sourceType == "webcam"){
 

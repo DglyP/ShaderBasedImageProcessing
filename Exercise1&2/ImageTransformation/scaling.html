@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+        <title>Exercise 2</title>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+			background-attachment: fixed !important;
+			}
+		</style>
+		<style>
+			body {
+				font-family: Monospace;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+        <script id="vertexShader" type="shader">
+            uniform mat4 modelViewMatrix;
+            uniform mat4 projectionMatrix;
+            uniform float scaleX;
+            uniform float scaleY;
+            
+            precision highp float;
+            
+            in vec3 position;
+
+            vec2 scale_coord(vec2 pt, float scaleX, float scaleY) {
+              mat2 scale_mat = mat2(
+                                    scaleX, 0, 
+                                    0, scaleY
+                                    );
+              return scale_mat * pt;
+            }
+
+            void main() {
+              vec3 newPos = position;
+              newPos.xy = scale_coord(newPos.xy, scaleX, scaleY);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0 );
+            }
+        </script>
+        
+        <script id="fragShader" type="shader">
+        precision highp float;
+        
+        uniform sampler2D image;
+        uniform vec2 resolution;
+        uniform float scale;
+        uniform int interpolation;
+        uniform float colorScaleR;
+        uniform float colorScaleG;
+        uniform float colorScaleB;
+                
+                
+        out vec4 out_FragColor;
+
+        // Redundant. OpenGL does it by default.
+        vec3 bilinear_iterp(vec2 frag_pos, sampler2D image, vec2 cellSize) {
+          textureValue += texelFetch( image, ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y)), 0 );
+        }
+
+        vec3 nn_iterp(vec2 frag_pos, sampler2D image, vec2 cellSize) {
+          textureValue += texelFetch( image, ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y)), 0 );
+        }
+
+        void main(void) {
+          
+          vec4 textureValue = vec4 ( 0,0,0,0 );				
+          ivec2 P = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
+        
+          vec3 textureValue;
+          if (interpolation == 0) {
+            textureValue = bilinear_iterp(P, image, cellSize);
+          } else if (interpolation == 1) {
+            textureValue = nn_iterp(uv, image, cellSize);
+          } else if (interpolation == 2) {
+            textureValue = texelFetch( image, ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y )));
+          }
+
+          out_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
+        }
+
+        </script>
+<script type="module" src="scene.js">
+</script>
+</body>

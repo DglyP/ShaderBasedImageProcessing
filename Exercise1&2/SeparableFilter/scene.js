@@ -33,11 +33,9 @@ function IVimageProcessing ( height, width, imageProcessingMaterial){
 	minFilter: THREE.NearestFilter,
 	magFilter: THREE.NearestFilter,
 	format: THREE.RGBAFormat,
-	//            type:THREE.FloatType
 	type:THREE.UnsignedByteType
 	};
 	this.rtt = new THREE.WebGLRenderTarget( width, height, options);
-
 	var geom = new THREE.BufferGeometry();
 	geom.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array([-1,-1,0, 1,-1,0, 1,1,0, -1,-1, 0, 1, 1, 0, -1,1,0 ]), 3 ) );
 	this.scene.add( new THREE.Mesh( geom, imageProcessingMaterial ) );
@@ -45,17 +43,24 @@ function IVimageProcessing ( height, width, imageProcessingMaterial){
 
 function IVprocess ( imageProcessing, renderer )
 {
-renderer.setRenderTarget( imageProcessing.rtt );
-renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
-renderer.setRenderTarget( null );
+	renderer.setRenderTarget( imageProcessing.rtt );
+	renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
+	renderer.setRenderTarget( null );
 };
 
 function frameProcessing (texture, height, width){
+
+
+		const secondImage = new THREE.TextureLoader().load('../../assets/image2.jpg');
+		secondImage.wrapS = secondImage.wrapT = THREE.RepeatWrapping;
+
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				image: {type: "t", value: texture},
-				kernelSize: {type: "i", value: 4.0},
-				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
+				sigma: {type: "f", value: 1.0},
+				kernelSize: {type: "i", value: 1},
+				firstpass: {type: "b", value: true},
+				resolution: {type:"2f", value: new THREE.Vector2(width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
 				colorScaleB: { type: 'f', value: 1.0 },
@@ -85,11 +90,16 @@ function frameProcessing (texture, height, width){
 			cleanSource.position.set(-0.55,0,-0.5);
 			processedImage.position.set(0.55,0,-0.5);
 			scene.add( processedImage );
-
+			
+			//Create all the GUI for the convolutions
 			gui = new GUI();
+			// Image scaling			
 			gui
-			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 10, 1)
-			  .name("Kernel Size");
+			.add(imageProcessingMaterial.uniforms.sigma, "value", 1, 10, 1)
+			.name("Sigma");
+			gui
+			.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 61, 1)
+			.name("Kernel Size");
 }
 
 function init () {
@@ -124,17 +134,17 @@ function init () {
 	const queryString = window.location.search;
 	const urlParams = new URLSearchParams(queryString);
 	const sourceType = urlParams.get('sourceimage');
-	console.log("You have provided a " + sourceType + " parameter");
-
+	console.log(sourceType);
+		
 	//Futuristic Scene
 	var envSphere = new THREE.SphereGeometry( 5, 60, 40 );
 	var material2 = new THREE.MeshBasicMaterial( {
-		map: new THREE.TextureLoader().load( '../../../assets/city.jpg' ), side : THREE.DoubleSide
+		map: new THREE.TextureLoader().load( '../../assets/city.jpg' ), side : THREE.DoubleSide
 	} );
 	var environment = new THREE.Mesh( envSphere, material2 );
 	environment.rotation.y = THREE.MathUtils.degToRad(90);
 	scene.add( environment );
-	
+
 	//Decide which type of file we are using - image || video || webcam
 	if (sourceType == "webcam"){
 
@@ -195,7 +205,8 @@ function init () {
 					frameProcessing(texture, sourceHeight, sourceWidth);
 				} );	
 	}
-	
+
+
 	window.addEventListener( 'resize', onWindowResize, false );
 }
 function render () {

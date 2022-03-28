@@ -156,7 +156,16 @@ function init () {
 	const urlParams = new URLSearchParams(queryString);
 	const sourceType = urlParams.get('sourceimage');
 	console.log(sourceType);
-	
+		
+	//Futuristic Scene
+	var envSphere = new THREE.SphereGeometry( 5, 60, 40 );
+	var material2 = new THREE.MeshBasicMaterial( {
+		map: new THREE.TextureLoader().load( '../../assets/city.jpg' ), side : THREE.DoubleSide
+	} );
+	var environment = new THREE.Mesh( envSphere, material2 );
+	environment.rotation.y = THREE.MathUtils.degToRad(90);
+	scene.add( environment );
+
 	//Decide which type of file we are using - image || video || webcam
 	if (sourceType == "webcam"){
 
