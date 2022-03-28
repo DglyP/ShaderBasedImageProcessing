@@ -52,8 +52,8 @@ function frameProcessing (texture, height, width){
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				image: {type: "t", value: texture},
-				sigma: {type: "f", value: 1.0},
-				kernelSize: {type: "i", value: 1.0},
+				sigma: {type: "f", value: 10.0},
+				kernelSize: {type: "i", value: 30.0},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },

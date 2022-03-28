@@ -68,7 +68,7 @@ function frameProcessing (texture, height, width){
 		imageProcessing = new IVimageProcessing(height, width, imageProcessingMaterial);
 			
 			var geometry = new THREE.PlaneGeometry( 1, height/width );
-			var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
+			var material = new THREE.MeshBasicMaterial( { map: texture, side : THREE.DoubleSide } );
 			cleanSource = new THREE.Mesh( geometry, material );
 			cleanSource.receiveShadow = false;
 			cleanSource.castShadow = false;

@@ -49,16 +49,26 @@ function IVprocess ( imageProcessing, renderer )
 };
 
 function frameProcessing (texture, height, width){
+
+
+		const secondImage = new THREE.TextureLoader().load('../../assets/image2.jpg');
+		secondImage.wrapS = secondImage.wrapT = THREE.RepeatWrapping;
+
 		imageProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
+				scale: {type: "f", value : 1.0},
+				centerX: {type: "f", value: 0.0},
+				centerY: {type: "f", value: 0.0},
 				image: {type: "t", value: texture},
-				sigma: {type: "f", value: 1.0},
-				kernelSize: {type: "i", value: 1.0},
-				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
+				image2: {type: "t", value: secondImage},
+				operation: {type: "i", value: 0},
+				mergeAmount: {type: "f", value: 0.0},
+				scaleFactor: {type: "f", value: 1.0},
+				offset: {type:"f", value: 0.0},
+				resolution: {type:"2f", value: new THREE.Vector2(width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
 				colorScaleB: { type: 'f', value: 1.0 },
-				image: { type: 't', value: texture },
 			},
 			vertexShader: document.
 				getElementById('vertexShader').text,
@@ -88,10 +98,29 @@ function frameProcessing (texture, height, width){
 			
 			//Create all the GUI for the convolutions
 			gui = new GUI();
-			gui.add(imageProcessingMaterial.uniforms.sigma, "value", 1, 10, 1)
-				.name("Sigma");
-			gui.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 30, 1)
-				.name("Kernel Size");
+			// Image scaling
+			gui
+			  .add(imageProcessingMaterial.uniforms.scale, "value", 0.1, 2)
+			  .name("Scale");
+			gui
+			  .add(imageProcessingMaterial.uniforms.centerX, "value", 0, width)
+			  .name("CenterX");
+			gui
+			  .add(imageProcessingMaterial.uniforms.centerY, "value", 0, 1)
+			  .name("CenterY");
+			// Image arithmetic
+			gui
+			  .add(imageProcessingMaterial.uniforms.operation, "value", {Sum: 0, Substract: 1, Multiply: 2, Divide: 3})
+			  .name("Operation");
+			gui
+			  .add(imageProcessingMaterial.uniforms.mergeAmount, "value", 0, 1)
+			  .name("Merge Amount");
+			gui
+			  .add(imageProcessingMaterial.uniforms.scaleFactor, "value", 0.1, 2)
+			  .name("Scale Factor");
+			gui
+			  .add(imageProcessingMaterial.uniforms.offset, "value", -1, 1)
+			  .name("Offset");
 }
 
 function init () {
