@@ -115,7 +115,7 @@ function frameProcessing (texture, height, width){
 				scale: {type: "f", value : 1.0},
 				centerX: {type: "f", value: 0.0},
 				centerY: {type: "f", value: 0.0},
-				image: {type: "t", value: knnProcessing.rtt.texture},
+				image: {type: "t", value: gaussianProcessing.rtt.texture},
 				image2: {type: "t", value: secondImage},
 				operation: {type: "i", value: 1},
 				mergeAmount: {type: "f", value: 0.0},
@@ -178,8 +178,10 @@ function frameProcessing (texture, height, width){
 			processedImage.receiveShadow = false;
 			processedImage.castShadow = false;
 			// Organize Planes so scene looks good
-			cleanSource.position.set(-0.55,0,-0.5);
-			processedImage.position.set(0.55,0,-0.5);
+			cleanSource.position.set(0,-0.55,-0.3);
+			cleanSource.rotation.x = THREE.MathUtils.degToRad(-30);
+			cleanSource.scale.set(0.5,0.5,0.5);
+			processedImage.position.set(0,0,-1);
 
 
 			scene.add( processedImage );
@@ -226,7 +228,7 @@ function frameProcessing (texture, height, width){
 				scene.remove( processedImage );
 				var scaledGeometry = new THREE.PlaneGeometry( value, value * height/width );
 				processedImage = new THREE.Mesh( scaledGeometry, material2 );
-				processedImage.position.set(0.55,0,-0.5);
+				processedImage.position.set(0,0,-0.5);
 				scene.add(processedImage);
 			} );
 			gui
