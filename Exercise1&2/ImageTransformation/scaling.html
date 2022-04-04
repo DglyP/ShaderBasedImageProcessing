@@ -25,70 +25,58 @@
 	</head>
 	<body>
         <script id="vertexShader" type="shader">
-            uniform mat4 modelViewMatrix;
-            uniform mat4 projectionMatrix;
-            uniform float scaleX;
-            uniform float scaleY;
-            
-            precision highp float;
-            
-            in vec3 position;
-
-            vec2 scale_coord(vec2 pt, float scaleX, float scaleY) {
-              mat2 scale_mat = mat2(
-                                    scaleX, 0, 
-                                    0, scaleY
-                                    );
-              return scale_mat * pt;
-            }
-
-            void main() {
-              vec3 newPos = position;
-              newPos.xy = scale_coord(newPos.xy, scaleX, scaleY);
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0 );
-            }
-        </script>
-        
-        <script id="fragShader" type="shader">
-        precision highp float;
-        
-        uniform sampler2D image;
-        uniform vec2 resolution;
-        uniform float scale;
-        uniform int interpolation;
-        uniform float colorScaleR;
-        uniform float colorScaleG;
-        uniform float colorScaleB;
-                
-                
-        out vec4 out_FragColor;
-
-        // Redundant. OpenGL does it by default.
-        vec3 bilinear_iterp(vec2 frag_pos, sampler2D image, vec2 cellSize) {
-          textureValue += texelFetch( image, ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y)), 0 );
-        }
-
-        vec3 nn_iterp(vec2 frag_pos, sampler2D image, vec2 cellSize) {
-          textureValue += texelFetch( image, ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y)), 0 );
-        }
-
-        void main(void) {
-          
-          vec4 textureValue = vec4 ( 0,0,0,0 );				
-          ivec2 P = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
-        
-          vec3 textureValue;
-          if (interpolation == 0) {
-            textureValue = bilinear_iterp(P, image, cellSize);
-          } else if (interpolation == 1) {
-            textureValue = nn_iterp(uv, image, cellSize);
-          } else if (interpolation == 2) {
-            textureValue = texelFetch( image, ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y )));
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          precision highp float;
+          in vec3 position;
+          void main() {
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
           }
+        </script>
 
-          out_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
-        }
+        <script id="fragShader" type="shader">
+          precision highp float;
+          uniform sampler2D image;
+          uniform float scaleFactor;
+          uniform bool bilinearFiltering;
+        
+          out vec4 out_FragColor;
+      
+          void main(void) {
+            float sampleX = gl_FragCoord.x / scaleFactor;
+            float sampleY = gl_FragCoord.y / scaleFactor;
 
+            //Locate the samples of X and Y in a 0 - 1 system
+
+            float h_0_x = floor(sampleX);
+            float h_0_y = floor(sampleY);
+            float h_1_x = ceil(sampleX);
+            float h_1_y = ceil(sampleY);
+            
+            // Nearest neighbour
+            vec4 textureValue = texelFetch(image, ivec2(int(sampleX), int(sampleY)), 0);
+      
+            if (bilinearFiltering) {
+              // Bilinear Filtering
+              // As P is the required coordinate for texelFetch, in this case I map the values of P to the texture coordinates required
+              ivec2 P_0_0 = ivec2(h_0_x, h_0_y);
+              ivec2 P_0_1 = ivec2(h_1_x, h_0_y);
+              ivec2 P_1_0 = ivec2(h_0_x, h_1_y);
+              ivec2 P_1_1 = ivec2(h_1_x, h_1_y);
+      
+              vec4 bottomLeftValue = texelFetch( image, P_0_0, 0 );
+              vec4 bottomRightValue = texelFetch( image, P_0_1, 0 );
+              vec4 topLeftValue = texelFetch( image, P_1_0, 0 );
+              vec4 topRightValue = texelFetch( image, P_1_1, 0 );
+      
+              vec4 horizontal1 = topRightValue * (sampleX - h_0_x) + topLeftValue * (h_1_x - sampleX);
+              vec4 horizontal2 = bottomRightValue * (sampleX - h_0_x) + bottomLeftValue * (h_1_x - sampleX);
+              vec4 verticalAverage = horizontal1 * (sampleY - h_0_y) + horizontal2 * (h_1_y - sampleY);
+      
+              textureValue = verticalAverage;
+            }
+            out_FragColor = textureValue;
+          }
         </script>
 <script type="module" src="scene.js">
 </script>

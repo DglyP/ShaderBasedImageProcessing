@@ -1,0 +1,56 @@
+const scalingVertexShader = `
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+precision highp float;
+in vec3 position;
+void main() {
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
+}
+`
+
+const scalingFragmentShader = `
+precision highp float;
+uniform sampler2D image;
+uniform float scaleFactor;
+uniform bool bilinearFiltering;
+
+out vec4 out_FragColor;
+
+void main(void) {
+  float sampleX = gl_FragCoord.x / scaleFactor;
+  float sampleY = gl_FragCoord.y / scaleFactor;
+
+  //Locate the samples of X and Y in a 0 - 1 system
+
+  float h_0_x = floor(sampleX);
+  float h_0_y = floor(sampleY);
+  float h_1_x = ceil(sampleX);
+  float h_1_y = ceil(sampleY);
+  
+  // Nearest neighbour
+  vec4 textureValue = texelFetch(image, ivec2(int(sampleX), int(sampleY)), 0);
+
+  if (bilinearFiltering) {
+    // Bilinear Filtering
+    // As P is the required coordinate for texelFetch, in this case I map the values of P to the texture coordinates required
+    ivec2 P_0_0 = ivec2(h_0_x, h_0_y);
+    ivec2 P_0_1 = ivec2(h_1_x, h_0_y);
+    ivec2 P_1_0 = ivec2(h_0_x, h_1_y);
+    ivec2 P_1_1 = ivec2(h_1_x, h_1_y);
+
+    vec4 bottomLeftValue = texelFetch( image, P_0_0, 0 );
+    vec4 bottomRightValue = texelFetch( image, P_0_1, 0 );
+    vec4 topLeftValue = texelFetch( image, P_1_0, 0 );
+    vec4 topRightValue = texelFetch( image, P_1_1, 0 );
+
+    vec4 horizontal1 = topRightValue * (sampleX - h_0_x) + topLeftValue * (h_1_x - sampleX);
+    vec4 horizontal2 = bottomRightValue * (sampleX - h_0_x) + bottomLeftValue * (h_1_x - sampleX);
+    vec4 verticalAverage = horizontal1 * (sampleY - h_0_y) + horizontal2 * (h_1_y - sampleY);
+
+    textureValue = verticalAverage;
+  }
+  out_FragColor = textureValue;
+}
+`
+
+export{scalingVertexShader, scalingFragmentShader}

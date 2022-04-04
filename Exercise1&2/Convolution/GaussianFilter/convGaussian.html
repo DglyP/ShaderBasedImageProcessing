@@ -52,7 +52,7 @@
 
     // position is the position of the pixel
     float get_value(vec2 position, float sigma) {
-    return exp(-((pow(position.x, 2.0) + pow(position.y, 2.0)) / (2.0 * pow(sigma, 2.0))));
+        return exp(-((pow(position.x, 2.0) + pow(position.y, 2.0)) / (2.0 * pow(sigma, 2.0))));
     }
     
     void main(void) {

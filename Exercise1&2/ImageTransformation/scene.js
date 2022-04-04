@@ -2,6 +2,7 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 import { GUI } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/lil-gui.module.min';
+import Stats from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/stats.module';
 import { WEBGL } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/WebGL.js';
 
 var camera, controls, scene, renderer, container;
@@ -15,6 +16,18 @@ var sourceHeight, sourceWidth;
 
 // GUI
 var gui;
+
+gui = new GUI();
+const stats = Stats()
+var panelType = 1;
+document.body.appendChild(stats.dom)
+stats.showPanel( panelType ); // 0: fps, 1: ms, 2: mb, 3+: custom
+const performancePanel = {
+	typeOfPanel: 1,
+}
+gui.add( performancePanel, 'typeOfPanel', 0, 2 ).step(1).name("Performance Panel").onChange( value => {
+	stats.showPanel(value)
+} );
 
 init();
 animate();
@@ -56,6 +69,8 @@ function frameProcessing (texture, height, width){
 				image: {type: "t", value: texture},
 				scaleX: {type: "f", value: 1.0},
 				scaleY: {type: "f", value: 1.0},
+				scaleFactor: {type: "f", value: 1.0},
+				bilinearFiltering: {type: "bool", value: true},
 				interpolation: {type: "i", value: 0},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
@@ -89,17 +104,19 @@ function frameProcessing (texture, height, width){
 			processedImage.position.set(0.55,0,-0.5);
 			scene.add( processedImage );
 
-			gui = new GUI();
-			// Image scaling
+			gui.add( imageProcessingMaterial.uniforms.scaleFactor, 'value', 1, 8 ).step(1)
+			.name("Scale Factor").onChange( value => {
+				imageProcessing.rtt.setSize(value * width, value * height);
+				scene.remove( processedImage );
+				var scaledGeometry = new THREE.PlaneGeometry( value, value * height/width );
+				processedImage = new THREE.Mesh( scaledGeometry, material2 );
+				processedImage.position.set(0.55,0,-0.5);
+				scene.add(processedImage);
+			} );
 			gui
-			.add(imageProcessingMaterial.uniforms.scaleX, "value", 0.1, 3)
-			.name("Scale X");
-			gui
-			.add(imageProcessingMaterial.uniforms.scaleY, "value", 0.1, 3)
-			.name("Scale Y");
-			gui
-			.add(imageProcessingMaterial.uniforms.interpolation, "value", {Bilinear: 0, Nearest: 1, NoInterp: 2})
+			.add(imageProcessingMaterial.uniforms.bilinearFiltering, "value")
 			.name("Interp. Method");
+
 }
 
 function init () {
@@ -144,6 +161,7 @@ function init () {
 	var environment = new THREE.Mesh( envSphere, material2 );
 	environment.rotation.y = THREE.MathUtils.degToRad(90);
 	scene.add( environment );
+	
 	
 	//Decide which type of file we are using - image || video || webcam
 	if (sourceType == "webcam"){
@@ -207,7 +225,9 @@ function init () {
 	}
 	
 	window.addEventListener( 'resize', onWindowResize, false );
+
 }
+
 function render () {
 	renderer.clear();
 	
@@ -221,6 +241,7 @@ function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
 	render();
+    stats.update()
 }
 
 function onWindowResize () {

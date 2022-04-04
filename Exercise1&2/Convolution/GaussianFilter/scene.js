@@ -90,8 +90,11 @@ function frameProcessing (texture, height, width){
 			gui = new GUI();
 			gui.add(imageProcessingMaterial.uniforms.sigma, "value", 1, 10, 1)
 				.name("Sigma");
-			gui.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 30, 1)
-				.name("Kernel Size");
+			gui.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 300, 1)
+				.name("Kernel Size").onChange( value => {
+					function run () {var script=document.createElement('script');script.onload=function(){var stats=new Stats();stats.showPanel(2);document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);}
+					run();
+				} );
 }
 
 function init () {

@@ -98,16 +98,6 @@ function frameProcessing (texture, height, width){
 			
 			//Create all the GUI for the convolutions
 			gui = new GUI();
-			// Image scaling
-			gui
-			  .add(imageProcessingMaterial.uniforms.scale, "value", 0.1, 2)
-			  .name("Scale");
-			gui
-			  .add(imageProcessingMaterial.uniforms.centerX, "value", 0, width)
-			  .name("CenterX");
-			gui
-			  .add(imageProcessingMaterial.uniforms.centerY, "value", 0, 1)
-			  .name("CenterY");
 			// Image arithmetic
 			gui
 			  .add(imageProcessingMaterial.uniforms.operation, "value", {Sum: 0, Substract: 1, Multiply: 2, Divide: 3})

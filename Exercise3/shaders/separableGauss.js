@@ -1,41 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-        <title>Exercise 2</title>
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-			margin: 0;
-			padding: 0;
-			width: 100%;
-			height: 100%;
-			margin: 0;
-			overflow: hidden;
-			background-attachment: fixed !important;
-			}
-		</style>
-		<style>
-			body {
-				font-family: Monospace;
-				margin: 0px;
-				overflow: hidden;
-			}
-		</style>
-	</head>
-<body>
-
-<script id="vertexShader" type="shader">
+const gaussianVertexShader = `
     uniform mat4 modelViewMatrix;
     uniform mat4 projectionMatrix;
     precision highp float;
     in vec3 position;
     void main() {
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
-    }
-</script>
+    }`
 
-<script id="fragShader" type="shader">
+
+const gaussianFragmentShader = `
     precision highp float;
     uniform sampler2D image;
     uniform float sigma;
@@ -81,9 +54,5 @@
       textureValue /= kernelSum;
       out_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0) * textureValue ;
       }
-
-</script>
-
-<script type="module" src="scene.js"></script>
-
-</body>
+      `
+  export {gaussianVertexShader, gaussianFragmentShader}

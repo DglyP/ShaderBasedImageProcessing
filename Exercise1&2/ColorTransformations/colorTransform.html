@@ -104,12 +104,11 @@
         return xyz2rgb(lab2xyz(vec3(100.0 * c.x, 2.0 * 127.0 * (c.y - 0.5), 2.0 * 127.0 * (c.z - 0.5))));
     }
 
-    void main(void) {				
-        vec2 cellSize = 1.0 / resolution.xy;
+    void main(void) {			
         ivec2 P = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
         vec4 pixel_sample = texelFetch( image, P, 0 );
         vec3 color = rgb2lab(pixel_sample.rgb);
-        float C_ab = length(vec2(color[1], color[2])); // sqrt((a*)^2+(b*)^2)
+        float C_ab = sqrt((color[1] * color[1]) + (color[2] * color[2])); // length(vec2(color[1], color[2])); // sqrt((a*)^2+(b*)^2)
         float h = atan(color[2], color[1]);
         
         h += (hueShift*pi)/180.0;
@@ -122,5 +121,4 @@
 </script>
 
 <script type="module" src="scene.js"></script>
-
 </body>

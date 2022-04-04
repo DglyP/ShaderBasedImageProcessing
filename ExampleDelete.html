@@ -1,278 +1,80 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-<style>
-body {
-margin: 0;
-padding: 0;
-width: 100%;
-height: 100%;
-
-margin: 0;
-overflow: hidden;
-background-color: #AAAAAA;
-background-attachment: fixed !important;
-}
-</style>
-<style>
-body {
-font-family: Monospace;
-margin: 0px;
-overflow: hidden;
-}
-</style>
-</head>
-<body>
-
-<script id="vertShader" type="shader">
-varying vec2 vUv;
-void main() {
-vUv = vec2( uv.x, 1.0-uv.y );
-gl_Position = projectionMatrix *
-modelViewMatrix * vec4(position, 1.0 );
-}
-</script>
-
-<script id="fragShader" type="shader">
-precision highp float;
-const int kernelSizeDiv2 = 2;
-uniform sampler2D image;
-uniform int sizeDiv2;
-uniform vec2 resolution;
-uniform float colorScaleR;
-uniform float colorScaleG;
-uniform float colorScaleB;
-uniform bool invert;
-uniform bool anaglyph;
-
-varying vec2 vUv;
-void main(void) {
-    vec2 cellSize = 1.0 / resolution.xy;
-    vec2 uv = vUv.xy;
-
-    vec4 textureValue = vec4 ( 0,0,0,0 );
-    for (int i=-sizeDiv2;i<=sizeDiv2;i++)
-        for (int j=-sizeDiv2;j<=sizeDiv2;j++)
-            textureValue += texture2D( image, uv + vec2( float(i)*cellSize.x, float(j)*cellSize.y ) );
-    textureValue /= float ((sizeDiv2*2+1)*(sizeDiv2*2+1));
-    if (invert)
-    {
-        gl_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
-        gl_FragColor.rgb = vec3 ( 1.0 ) - gl_FragColor.rgb;
+<script id="colMatFrag" type="shader">
+    varying vec2 vUv;
+    uniform sampler2D image;
+    uniform float rad;
+    
+    void main() {
+        vec3 texture = texture2D (image, vUv ).rgb;
+        vec2 uv = vUv.xy;
+        float var_R = texture[0];
+        float var_G = texture[1]; 
+        float var_B = texture[2];
+    
+        if (var_R > 0.04045) var_R = pow(((var_R + 0.055) / 1.055), 2.4);
+        else var_R = var_R / 12.92;
+        if (var_G > 0.04045) var_G = pow(((var_G + 0.055) / 1.055), 2.4);
+        else var_G = var_G / 12.92;
+        if (var_B > 0.04045) var_B = pow(((var_B + 0.055) / 1.055), 2.4);
+        else var_B = var_B / 12.92;
+    
+        var_R *= 100.0;
+        var_G *= 100.0;
+        var_B *= 100.0;
+    
+        float XYZ[3];
+    
+        XYZ[0] = (var_R * 0.4124 + var_G * 0.3576 + var_B * 0.1805) / 95.047;
+        XYZ[1] = (var_R * 0.2126 + var_G * 0.7152 + var_B * 0.0722) / 100.0;
+        XYZ[2] = (var_R * 0.0193 + var_G * 0.1192 + var_B * 0.9505) / 108.883;
+    
+        for (int i = 0; i < 3; ++i) {
+            float value = XYZ[i];
+            if (value > 0.008856) {
+                value = pow(value, 0.3333333333333333);
+            } else {
+                value = (7.787 * value) + float(16 / 116);
+            }
+            XYZ[i] = value;
+        }
+    
+        float L = (116.0 * XYZ[1]) - 16.0;
+        float a = 500.0 * (XYZ[0] - XYZ[1]);
+        float b = 200.0 * (XYZ[1] - XYZ[2]);
+    
+        float C = sqrt((a * a) + (b * b));
+        float hub = atan(b / a);
+    
+        float na = cos(hub + rad) * C;
+        float nb = sin(hub + rad) * C;
+    
+        float nY = (L + 16.0) / 116.0;
+        float nX = (na / 500.0) + nY;
+        float nZ = nY - (nb / 200.0);
+    
+        if (pow(nY, 3.0) > 0.008856) nY = pow(nY, 3.0);
+        else                       nY = (nY - (16.0 / 116.0)) / 7.787;
+        if (pow(nX, 3.0) > 0.008856) nX = pow(nX, 3.0);
+        else                       nX = (nX - (16.0 / 116.0)) / 7.787;
+        if (pow(nZ, 3.0) > 0.008856) nZ = pow(nZ, 3.0);
+        else                       nZ = (nZ - (16.0 / 116.0)) / 7.787;
+    
+        nX *= 95.047;
+        nY *= 100.0;
+        nZ *= 108.883;
+    
+        float nR = (nX / 100.0) * 3.2406 + (nY / 100.0) * -1.5372 + (nZ / 100.0) * -0.4986;
+        float nG = (nX / 100.0) * -0.9689 + (nY / 100.0) * 1.8758 + (nZ / 100.0) * 0.0415;
+        float nB = (nX / 100.0) * 0.0557 + (nY / 100.0) * -0.2040 + (nZ / 100.0) * 1.0570;
+    
+        if (nR > 0.0031308) nR = 1.055 * (pow(nR, (1.0 / 2.4))) - 0.055;
+        else                nR = 12.92 * nR;
+        if (nG > 0.0031308) nG = 1.055 * (pow(nG, (1.0 / 2.4))) - 0.055;
+        else                nG = 12.92 * nG;
+        if (nB > 0.0031308) nB = 1.055 * (pow(nB, (1.0 / 2.4))) - 0.055;
+        else                nB = 12.92 * nB;
+    
+        vec3 res = vec3 ( nR, nG, nB);
+        gl_FragColor.rgb = res;    
+        gl_FragColor.a = 1.0;
     }
-    else if(anaglyph)
-    {
-        vec3 colorvalue = vec3 (colorScaleR, colorScaleG, colorScaleB);
-        vec3 column1_0 = vec3(0.299, 0.587, 0.114);
-        vec3 column1_1 = vec3(0.0, 0.0, 0.0);
-        vec3 column1_2 = vec3(0.0, 0.0, 0.0);
-        mat3 n1 = mat3(column1_0, column1_1, column1_2); // sets columns of matrix n
-
-
-        vec3 column2_0 = vec3(0.0, 0.0, 0.0);
-        vec3 column2_1 = vec3(0.0, 0.0, 0.0);
-        vec3 column2_2 = vec3(0.299, 0.587, 0.114);
-        mat3 n2 = mat3(column2_0, column2_1, column2_2); // sets columns of matrix n
-
-        vec3 result = (n1 * colorvalue) + (n2 * colorvalue);
-
-        gl_FragColor = vec4(result,1.0)*textureValue;
-    }
-    else
-        gl_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
-}
-</script>
-
-<script type="module">
-
-import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
-import { GUI } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/lil-gui.module.min';
-
-function IVimageProcessing ( height, width, imageProcessingMaterial )
-{
-this.height = height;
-this.width = width;
-
-//3 rtt setup
-this.scene = new THREE.Scene();
-this.orthoCamera = new THREE.OrthographicCamera(-1,1,1,-1,1/Math.pow( 2, 53 ),1 );
-
-//4 create a target texture
-var options = {
-minFilter: THREE.NearestFilter,
-magFilter: THREE.NearestFilter,
-format: THREE.RGBAFormat,
-//            type:THREE.FloatType
-type:THREE.UnsignedByteType
-};
-this.rtt = new THREE.WebGLRenderTarget( width, height, options);
-
-var geom = new THREE.BufferGeometry();
-geom.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array([-1,-1,0, 1,-1,0, 1,1,0, -1,-1, 0, 1, 1, 0, -1,1,0 ]), 3 ) );
-geom.addAttribute( 'uv', new THREE.BufferAttribute( new Float32Array([ 0,1, 1,1, 1,0, 0,1, 1,0, 0,0 ]), 2 ) );
-this.scene.add( new THREE.Mesh( geom, imageProcessingMaterial ) );
-}
-
-function IVprocess ( imageProcessing, renderer )
-{
-renderer.setRenderTarget( imageProcessing.rtt );
-renderer.render ( imageProcessing.scene, imageProcessing.orthoCamera ); 	
-renderer.setRenderTarget( null );
-};
-
-var camera, controls, scene, renderer, container;
-var plan;
-
-// VIDEO AND THE ASSOCIATED TEXTURE
-var video,videoTexture;
-
-var imageProcessing, imageProcessingMaterial;
-
-// GUI
-var gui;
-
-init();
-animate();
-
-function init () {
-
-container = document.createElement( 'div' );
-document.body.appendChild( container );
-
-scene = new THREE.Scene(); 
-
-renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
-renderer.autoClear = false;
-renderer.setPixelRatio( window.devicePixelRatio );
-renderer.setSize( window.innerWidth, window.innerHeight );
-renderer.shadowMap.enabled = false;
-
-container.appendChild( renderer.domElement );
-
-camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.001, 10 );
-camera.position.z = 0.7;
-controls = new OrbitControls( camera, renderer.domElement );
-controls.minDistance = 0.005;
-controls.maxDistance = 1.0;
-controls.enableRotate = true;
-controls.addEventListener( 'change', render );
-controls.update();
-
-if ( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
-const constraints = { video: { width: 1920, height: 1080, facingMode: 'user' } };
-navigator.mediaDevices.getUserMedia( constraints ).then( function ( stream ) 
-{
-video = document.createElement('video');
-video.srcObject = stream;
-video.play();
-
-video.onloadeddata = function () 
-{ 
-videoTexture = new THREE.VideoTexture( video );
-videoTexture.minFilter = THREE.NearestFilter;
-videoTexture.magFilter = THREE.NearestFilter;
-videoTexture.generateMipmaps = false; 
-videoTexture.format = THREE.RGBFormat;
-
-imageProcessingMaterial = new THREE.ShaderMaterial({
-uniforms: {
-sizeDiv2: {type: 'i', value: 5},
-colorScaleR: {type: 'f', value: 1.0},
-colorScaleG: {type: 'f', value: 1.0},
-colorScaleB: {type: 'f', value: 1.0},
-invert: {type: 'b', value: false},
-anaglyph: {type: 'b', value: false},
-image: {type: 't', value: videoTexture},
-resolution: {type: '2f', value:  new THREE.Vector2( video.videoWidth, video.videoHeight ) }
-},
-vertexShader: document.
-getElementById('vertShader').text,
-fragmentShader: document.
-getElementById('fragShader').text,
-});
-
-imageProcessing = new IVimageProcessing ( video.videoHeight, video.videoWidth, imageProcessingMaterial );
-
-console.log ( imageProcessing.width );
-
-var geometry = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
-var material = new THREE.MeshBasicMaterial( { map: imageProcessing.rtt.texture, side : THREE.DoubleSide } );
-plan = new THREE.Mesh( geometry, material );
-plan.receiveShadow = false;
-plan.castShadow = false;
-scene.add( plan );
-
-var geometry2 = new THREE.PlaneGeometry( 1, video.videoHeight/video.videoWidth );
-var material2 = new THREE.MeshBasicMaterial( { map: videoTexture, side : THREE.DoubleSide } );
-plan = new THREE.Mesh( geometry2, material2 );
-plan.position.z = -0.5;
-plan.receiveShadow = false;
-plan.castShadow = false;
-scene.add( plan );
-
-var pausePlayObj =
-{
-pausePlay: function () 
-{
-if (!video.paused)
-{
-console.log ( "pause" );
-video.pause();
-}
-else
-{
-console.log ( "play" );
-video.play();
-}
-},
-add10sec: function ()
-{
-video.currentTime = video.currentTime + 10;
-console.log ( video.currentTime  );
-}
-};
-
-gui = new GUI();
-gui.add(imageProcessingMaterial.uniforms.colorScaleR , 'value', 0, 1).name('Red'); 
-gui.add(imageProcessingMaterial.uniforms.colorScaleG , 'value', 0, 1).name('Green');
-gui.add(imageProcessingMaterial.uniforms.colorScaleB , 'value', 0, 1).name('Blue');
-gui.add(imageProcessingMaterial.uniforms.invert , 'value').name('Invert');
-gui.add(imageProcessingMaterial.uniforms.anaglyph , 'value').name('Anaglyph');
-gui.add(pausePlayObj,'pausePlay').name ('Pause/play video');
-gui.add(pausePlayObj,'add10sec').name ('Add 10 seconds');
-
-video.play();
-
-};
-
-window.addEventListener( 'resize', onWindowResize, false );
-})}}
-
-function render () {
-renderer.clear();
-
-if (typeof imageProcessing !== 'undefined') 
-IVprocess ( imageProcessing, renderer );
-renderer.render( scene, camera );
-
-}
-
-function animate() {	
-requestAnimationFrame(animate);
-controls.update();
-render();
-}
-
-function onWindowResize () {
-camera.aspect = ( window.innerWidth / window.innerHeight);
-camera.updateProjectionMatrix();
-renderer.setSize( window.innerWidth, window.innerHeight );
-render();
-}
-
-</script>
-</body>
-</html>
+    </script>
