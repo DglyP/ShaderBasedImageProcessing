@@ -93,7 +93,7 @@ function frameProcessing (texture, height, width){
 			gui = new GUI();
 			gui.add(imageProcessingMaterial.uniforms.sigma, "value", 1, 10, 1)
 				.name("Sigma");
-			gui.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 80, 1)
+			gui.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 150, 1)
 				.name("Kernel Size").onChange( value => {
 				} );
 				const stats = {

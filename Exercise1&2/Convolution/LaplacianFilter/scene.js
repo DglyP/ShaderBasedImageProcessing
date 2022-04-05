@@ -98,7 +98,7 @@ function frameProcessing (texture, height, width){
 			  .add(imageProcessingMaterial.uniforms.sigma, "value", 1, 5, 1)
 			  .name("Sigma");
 			gui
-			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 80, 1)
+			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 40, 1)
 			  .name("Kernel Size");
 			gui
 			  .add(imageProcessingMaterial.uniforms.firstMatrix, "value", "checkbox")
