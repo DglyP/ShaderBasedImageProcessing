@@ -86,8 +86,11 @@ function frameProcessing (texture, height, width){
 			processedImage.receiveShadow = false;
 			processedImage.castShadow = false;
 			// Organize Planes so scene looks good
-			cleanSource.position.set(-0.55,0,-0.5);
-			processedImage.position.set(0.55,0,-0.5);
+			cleanSource.position.set(0,-0.55,-0.3);
+			cleanSource.rotation.x = THREE.MathUtils.degToRad(-30);
+			cleanSource.scale.set(0.5,0.5,0.5);
+			processedImage.position.set(0,0,-1);
+			processedImage.scale.set(2,2,2);
 			scene.add( processedImage );
 
 			gui = new GUI();
@@ -95,7 +98,7 @@ function frameProcessing (texture, height, width){
 			  .add(imageProcessingMaterial.uniforms.sigma, "value", 1, 5, 1)
 			  .name("Sigma");
 			gui
-			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 100, 1)
+			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 80, 1)
 			  .name("Kernel Size");
 			gui
 			  .add(imageProcessingMaterial.uniforms.firstMatrix, "value", "checkbox")
@@ -106,6 +109,20 @@ function frameProcessing (texture, height, width){
 			gui
 			  .add(imageProcessingMaterial.uniforms.normal, "value", "checkbox")
 			  .name("Normalize");
+			  const stats = {
+				Stats() { var script=document.createElement('script');
+						script.onload=function(){
+													var stats=new Stats();
+													document.body.appendChild(stats.dom);
+													requestAnimationFrame(function loop(){
+																						stats.update();
+																						requestAnimationFrame(loop)});
+																					};
+													script.src='//mrdoob.github.io/stats.js/build/stats.min.js';
+													document.head.appendChild(script); }
+			};
+			
+			gui.add( stats, 'Stats' );
 }
 
 function init () {

@@ -55,6 +55,7 @@ function frameProcessing (texture, height, width){
 			uniforms: {
 				image: {type: "t", value: texture},
 				kernelSize: {type: "i", value: 4.0},
+				percentageOfKernel: {type: "i", value: 100},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
@@ -82,14 +83,40 @@ function frameProcessing (texture, height, width){
 			processedImage.receiveShadow = false;
 			processedImage.castShadow = false;
 			// Organize Planes so scene looks good
-			cleanSource.position.set(-0.55,0,-0.5);
-			processedImage.position.set(0.55,0,-0.5);
+			cleanSource.position.set(0,-0.55,-0.3);
+			cleanSource.rotation.x = THREE.MathUtils.degToRad(-30);
+			cleanSource.scale.set(0.5,0.5,0.5);
+			processedImage.position.set(0,0,-1);
+			processedImage.scale.set(2,2,2);
 			scene.add( processedImage );
 
 			gui = new GUI();
 			gui
 			  .add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 10, 1)
-			  .name("Kernel Size");
+			  .name("Kernel Size").onChange( value => {
+				imageProcessingMaterial.uniforms.percentageOfKernel.value = 100;
+			} );
+			gui
+			.add(imageProcessingMaterial.uniforms.percentageOfKernel, "value", 1, 100, 10)
+			.listen()
+			.name("PercentageOfKernel").onChange( value => {
+				imageProcessingMaterial.uniforms.kernelSize.value = 10;
+				imageProcessingMaterial.uniforms.kernelSize.value = ((imageProcessingMaterial.uniforms.kernelSize.value * value) / 100);
+			} );
+			  const stats = {
+				Stats() { var script=document.createElement('script');
+						script.onload=function(){
+													var stats=new Stats();
+													document.body.appendChild(stats.dom);
+													requestAnimationFrame(function loop(){
+																						stats.update();
+																						requestAnimationFrame(loop)});
+																					};
+													script.src='//mrdoob.github.io/stats.js/build/stats.min.js';
+													document.head.appendChild(script); }
+			};
+			
+			gui.add( stats, 'Stats' );
 }
 
 function init () {

@@ -81,20 +81,30 @@ function frameProcessing (texture, height, width){
 			processedImage.receiveShadow = false;
 			processedImage.castShadow = false;
 			// Organize Planes so scene looks good
-			cleanSource.position.set(-0.55,0,-0.5);
-			processedImage.position.set(0.55,0,-0.5);
+			cleanSource.position.set(0,-0.55,-0.3);
+			cleanSource.rotation.x = THREE.MathUtils.degToRad(-30);
+			cleanSource.scale.set(0.5,0.5,0.5);
+			processedImage.position.set(0,0,-1);
+			processedImage.scale.set(2,2,2);
 			scene.add( processedImage );
-
 			gui = new GUI();
 			gui
-				.add(imageProcessingMaterial.uniforms.hueShift, "value", 0, 360)
-				.name("Hue Shift");
-			gui
-				.add(imageProcessingMaterial.uniforms.kernelSize, "value", 1, 300, 1)
-				.name("Kernel Size").onChange( value => {
-					function run () {var script=document.createElement('script');script.onload=function(){var stats=new Stats();stats.showPanel(2);document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);}
-					run();
-				} );	
+			.add(imageProcessingMaterial.uniforms.hueShift, "value", 0, 360)
+			.name("Hue Shift");
+			const stats = {
+				Stats() { var script=document.createElement('script');
+						script.onload=function(){
+													var stats=new Stats();
+													document.body.appendChild(stats.dom);
+													requestAnimationFrame(function loop(){
+																						stats.update();
+																						requestAnimationFrame(loop)});
+																					};
+													script.src='//mrdoob.github.io/stats.js/build/stats.min.js';
+													document.head.appendChild(script); }
+			};
+			
+			gui.add( stats, 'Stats' );
 }
 
 function init () {

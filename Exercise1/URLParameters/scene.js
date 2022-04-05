@@ -80,8 +80,11 @@ function frameProcessing (texture, height, width){
 			processedImage.receiveShadow = false;
 			processedImage.castShadow = false;
 			// Organize Planes so scene looks good
-			cleanSource.position.set(-0.55,0,-0.5);
-			processedImage.position.set(0.55,0,-0.5);
+			cleanSource.position.set(0,-0.55,-0.3);
+			cleanSource.rotation.x = THREE.MathUtils.degToRad(-30);
+			cleanSource.scale.set(0.5,0.5,0.5);
+			processedImage.position.set(0,0,-1);
+			processedImage.scale.set(2,2,2);
 			scene.add( processedImage );
 }
 
@@ -164,7 +167,7 @@ function init () {
 	else if(sourceType == "video"){
 		
 		video = document.createElement('video');
-		video.src = '../../../assets/video.mp4';
+		video.src = '../../assets/video.mp4';
 		video.load();
 		video.muted = true;
 		video.loop = true;
@@ -183,7 +186,7 @@ function init () {
 	}
 	else if(sourceType == "image"){
 		const loader = new THREE.TextureLoader();
-                loader.load('../../../assets/grenouille.jpg', function(texture){
+                loader.load('../../assets/grenouille.jpg', function(texture){
                     sourceHeight = texture.image.height;
                     sourceWidth = texture.image.width;
 					frameProcessing(texture, sourceHeight, sourceWidth);
@@ -191,7 +194,7 @@ function init () {
 	}
 	else{	
 		const loader = new THREE.TextureLoader();
-                loader.load('../../../assets/grenouille.jpg', function(texture){
+                loader.load('../../assets/grenouille.jpg', function(texture){
 					sourceHeight = texture.image.height;
                     sourceWidth = texture.image.width;
 					frameProcessing(texture, sourceHeight, sourceWidth);

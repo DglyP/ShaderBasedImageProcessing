@@ -22,12 +22,7 @@ const stats = Stats()
 var panelType = 1;
 document.body.appendChild(stats.dom)
 stats.showPanel( panelType ); // 0: fps, 1: ms, 2: mb, 3+: custom
-const performancePanel = {
-	typeOfPanel: 1,
-}
-gui.add( performancePanel, 'typeOfPanel', 0, 2 ).step(1).name("Performance Panel").onChange( value => {
-	stats.showPanel(value)
-} );
+
 
 init();
 animate();
@@ -100,8 +95,11 @@ function frameProcessing (texture, height, width){
 			processedImage.receiveShadow = false;
 			processedImage.castShadow = false;
 			// Organize Planes so scene looks good
-			cleanSource.position.set(-0.55,0,-0.5);
-			processedImage.position.set(0.55,0,-0.5);
+			cleanSource.position.set(0,-0.55,-0.3);
+			cleanSource.rotation.x = THREE.MathUtils.degToRad(-30);
+			cleanSource.scale.set(0.5,0.5,0.5);
+			processedImage.position.set(0,0,-1);
+			processedImage.scale.set(2,2,2);
 			scene.add( processedImage );
 
 			gui.add( imageProcessingMaterial.uniforms.scaleFactor, 'value', 1, 8 ).step(1)
@@ -110,12 +108,26 @@ function frameProcessing (texture, height, width){
 				scene.remove( processedImage );
 				var scaledGeometry = new THREE.PlaneGeometry( value, value * height/width );
 				processedImage = new THREE.Mesh( scaledGeometry, material2 );
-				processedImage.position.set(0.55,0,-0.5);
+				processedImage.position.set(0,0,-1);
 				scene.add(processedImage);
 			} );
 			gui
 			.add(imageProcessingMaterial.uniforms.bilinearFiltering, "value")
 			.name("Interp. Method");
+			const stats = {
+				Stats() { var script=document.createElement('script');
+						script.onload=function(){
+													var stats=new Stats();
+													document.body.appendChild(stats.dom);
+													requestAnimationFrame(function loop(){
+																						stats.update();
+																						requestAnimationFrame(loop)});
+																					};
+													script.src='//mrdoob.github.io/stats.js/build/stats.min.js';
+													document.head.appendChild(script); }
+			};
+			
+			gui.add( stats, 'Stats' );
 
 }
 

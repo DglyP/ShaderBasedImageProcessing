@@ -15,6 +15,7 @@ var cleanSource, processedImage;
 
 //VIDEO AND THE ASSOCIATED TEXTURE
 var video, videoTexture;
+var secondImage;
 var gaussianProcessing, gaussianProcessingMaterial;
 var knnProcessing, knnProcessingMaterial;
 var arithmeticProcessing, arithmeticProcessingMaterial;
@@ -59,7 +60,7 @@ function IVprocess ( imageProcessing, renderer )
 function frameProcessing (texture, height, width){
 
 
-		const secondImage = new THREE.TextureLoader().load('../../assets/image2.jpg');
+		secondImage = new THREE.TextureLoader().load('../../assets/image2.jpg');
 		secondImage.wrapS = secondImage.wrapT = THREE.RepeatWrapping;
 		var geometry = new THREE.PlaneGeometry( 1, height/width );
 		var material = new THREE.MeshBasicMaterial( { map: texture, side : THREE.DoubleSide } );
@@ -72,8 +73,8 @@ function frameProcessing (texture, height, width){
 		gaussianProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				image: {type: "t", value: texture},
-				sigma: {type: "f", value: 1.0},
-				kernelSize: {type: "i", value: 1},
+				sigma: {type: "f", value: 10.0},
+				kernelSize: {type: "i", value: 61},
 				firstpass: {type: "b", value: true},
 				resolution: {type:"2f", value: new THREE.Vector2(width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
@@ -93,7 +94,7 @@ function frameProcessing (texture, height, width){
 		knnProcessingMaterial = new THREE.RawShaderMaterial({
 			uniforms: {
 				image: {type: "t", value: texture},
-				kernelSize: {type: "i", value: 4.0},
+				kernelSize: {type: "i", value: 10.0},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
 				colorScaleR: { type: 'f', value: 1.0 },
 				colorScaleG: { type: 'f', value: 1.0 },
@@ -116,9 +117,9 @@ function frameProcessing (texture, height, width){
 				centerX: {type: "f", value: 0.0},
 				centerY: {type: "f", value: 0.0},
 				image: {type: "t", value: gaussianProcessing.rtt.texture},
-				image2: {type: "t", value: secondImage},
+				image2: {type: "t", value: knnProcessing.rtt.texture},
 				operation: {type: "i", value: 1},
-				mergeAmount: {type: "f", value: 0.0},
+				mergeAmount: {type: "f", value: 1.0},
 				scaleFactor: {type: "f", value: 1.0},
 				offset: {type:"f", value: 0.0},
 				resolution: {type:"2f", value: new THREE.Vector2(width, height)},
@@ -145,7 +146,8 @@ function frameProcessing (texture, height, width){
 				scaleY: {type: "f", value: 1.0},
 				scaleFactor: {type: "f", value: 1.0},
 				bilinearFiltering: {type: "bool", value: true},
-				gaussianRoute: {type: "bool", value: true},
+				steamProcess: {type: "bool", value: true},
+				gaussianRoute: {type: "bool", value: false},
 				knnRoute: {type: "bool", value: false},
 				interpolation: {type: "i", value: 0},
 				resolution: {type: "2f", value: new THREE.Vector2( width, height)},
@@ -160,10 +162,7 @@ function frameProcessing (texture, height, width){
 		});
 
 
-		const stats = {
-			Stats() { var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script); }
-		};
-		
+
 		scaleProcessing = new IVimageProcessing(height, width, scaleProcessingMaterial);
 		var geometry2 = new THREE.PlaneGeometry( 1, height/width );
 		var material2 = new THREE.MeshBasicMaterial( { map: scaleProcessing.rtt.texture, side : THREE.DoubleSide } );
@@ -235,35 +234,68 @@ function frameProcessing (texture, height, width){
 			.add(scaleProcessingMaterial.uniforms.bilinearFiltering, "value")
 			.name("Interpolation");
 			gui
-			.add(scaleProcessingMaterial.uniforms.gaussianRoute, "value")
-			.name("Gaussian Route")
+			.add(scaleProcessingMaterial.uniforms.steamProcess, "value")
+			.name("Steam Process")
 			.listen()
 			.onChange( value =>{
 				gaussianProcessingMaterial.uniforms.sigma.value = 10; 
 				gaussianProcessingMaterial.uniforms.kernelSize.value = 61; 
 				IVprocess ( gaussianProcessing, renderer );
-				arithmeticProcessingMaterial.uniforms.image.value = gaussianProcessing.rtt.texture;	
+				arithmeticProcessingMaterial.uniforms.image.value = gaussianProcessing.rtt.texture;
+				arithmeticProcessingMaterial.uniforms.image2.value = knnProcessing.rtt.texture;
 				arithmeticProcessingMaterial.uniforms.mergeAmount.value = 1;
 				IVprocess ( arithmeticProcessing, renderer );
-				scaleProcessingMaterial.uniforms.gaussianRoute.value = value;
+				scaleProcessingMaterial.uniforms.gaussianRoute.value = !value;
 				scaleProcessingMaterial.uniforms.knnRoute.value = !value;
 				IVprocess ( scaleProcessing, renderer );						
 			});
 			gui
+			.add(scaleProcessingMaterial.uniforms.gaussianRoute, "value")
+			.name("Disable Knn")
+			.listen()
+			.onChange( value =>{
+				gaussianProcessingMaterial.uniforms.sigma.value = 10; 
+				gaussianProcessingMaterial.uniforms.kernelSize.value = 61; 
+				IVprocess ( gaussianProcessing, renderer );
+				arithmeticProcessingMaterial.uniforms.image.value = gaussianProcessing.rtt.texture;
+				arithmeticProcessingMaterial.uniforms.image2.value = secondImage;		
+				arithmeticProcessingMaterial.uniforms.mergeAmount.value = 1;
+				IVprocess ( arithmeticProcessing, renderer );
+				scaleProcessingMaterial.uniforms.gaussianRoute.value = value;
+				scaleProcessingMaterial.uniforms.knnRoute.value = !value;
+				scaleProcessingMaterial.uniforms.steamProcess.value = !value;
+				IVprocess ( scaleProcessing, renderer );						
+			});
+			gui
 			.add(scaleProcessingMaterial.uniforms.knnRoute, "value")
-			.name("Knn Route")
+			.name("Disable Gaussian")
 			.listen()
 			.onChange( value =>{
 				knnProcessingMaterial.uniforms.kernelSize.value = 10;
 				IVprocess ( knnProcessing, renderer );
-				arithmeticProcessingMaterial.uniforms.image.value = knnProcessing.rtt.texture;	
+				arithmeticProcessingMaterial.uniforms.image.value = knnProcessing.rtt.texture;
+				arithmeticProcessingMaterial.uniforms.image2.value = secondImage;			
 				arithmeticProcessingMaterial.uniforms.mergeAmount.value = 1;
 				IVprocess ( arithmeticProcessing, renderer );
 				scaleProcessingMaterial.uniforms.gaussianRoute.value = !value;
 				scaleProcessingMaterial.uniforms.knnRoute.value = value;
+				scaleProcessingMaterial.uniforms.steamProcess.value = !value;
 				// scaleProcessingMaterial.uniforms.scaleFactor = 1;
 				IVprocess ( scaleProcessing, renderer );						
 			});
+			const stats = {
+				Stats() { var script=document.createElement('script');
+						script.onload=function(){
+													var stats=new Stats();
+													document.body.appendChild(stats.dom);
+													requestAnimationFrame(function loop(){
+																						stats.update();
+																						requestAnimationFrame(loop)});
+																					};
+													script.src='//mrdoob.github.io/stats.js/build/stats.min.js';
+													document.head.appendChild(script); }
+			};
+			
 			gui.add( stats, 'Stats' );
 }
 
